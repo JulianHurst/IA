@@ -53,7 +53,7 @@ typedef struct{
 		printf("size : %d\n",size);
 		rewind(fp);
     cl->size=size;
-		cl->C=malloc(sizeof(char*)*size+1);
+		cl->C=malloc(sizeof(char*)*500);
 		for(i=0;i<size;i++)
 			cl->C[i]=malloc(sizeof(char*)*size);
     i=0;
@@ -74,9 +74,10 @@ typedef struct{
  }
 
 //lit les clauses dans un tableau 2D de INT selon où a=1 , -a=2 , b=3 ...
- clause *readfic(char *file,clause *cl){
+ clause *readfic(char *file){
+   clause *cl;
 	FILE *fp;
-	int ch,i,j=0,size=0,sizel=0;	
+	int ch,i,j=0,size=0,sizel=0;
 	fp=fopen(file,"r");
 	if(fp){
 		while((ch=fgetc(fp))!=EOF){
@@ -87,9 +88,9 @@ typedef struct{
 		rewind(fp);
 		cl=malloc(sizeof(clause*));
 		cl->size=size;
-		cl->C=malloc(sizeof(lit*)*size+1);
+		cl->C=malloc(sizeof(lit*)*(2*size));
 		for(int i=0;i<cl->size;i++)
-		  cl->C[i].l=malloc(sizeof(int*)*500);
+		  cl->C[i].l=malloc(sizeof(int*)*50);
 
     i=0;
 		while((ch=fgetc(fp))!=EOF){
@@ -112,11 +113,11 @@ typedef struct{
       j=0;
 			i++;
 		 }
-		 fclose(fp);		 
+		 fclose(fp);
 	 }
 	 return cl;
  }
- 
+
 //affiche les clauses pour la structure avec tableau de CHARR
  void printclauseslit(clauselit cl){
   for(int i=0;i<cl.size;i++){
@@ -162,7 +163,7 @@ int inconsistent(clause cl, lit taken){
 			return 1;
 		for(int j=i+1;j<cl.size;j++)
 			if(cl.C[j].size==1 && cl.C[i].l[0]-1==cl.C[j].l[0])
-				return 1;			
+				return 1;
       }
       else{
         if(findlit(cl.C[i].l[0]+1,taken)!=-1)
@@ -171,13 +172,13 @@ int inconsistent(clause cl, lit taken){
 			if(cl.C[j].size==1 && cl.C[i].l[0]+1==cl.C[j].l[0])
 				return 1;
 	}
-  return 0; 
+  return 0;
 }
 
 
 //Cherche un mono-littéral
 int monolit(clause cl){
-  for(int i=0;i<cl.size;i++){	  
+  for(int i=0;i<cl.size;i++){
     if(cl.C[i].size==1)
       return cl.C[i].l[0];
   }
@@ -211,7 +212,7 @@ clause *choicelit(int l,clause *cl){
     }
     //adjust list like above and decrement size
     if(l%2==0)
-      x=findlit(l-1,cl->C[i]);      
+      x=findlit(l-1,cl->C[i]);
     else
 		x=findlit(l+1,cl->C[i]);
 	if(x!=-1){
@@ -240,7 +241,7 @@ int dpll(clause *cl){
   int i=0,n,l;
   lit taken;
   taken.size=0;
-  taken.l=malloc(sizeof(int*)*100);  
+  taken.l=malloc(sizeof(int*)*100);
   //Si vide renvoie vrai
   while(cl->size!=0){
 	  // si pb renvoie faux
@@ -256,7 +257,7 @@ int dpll(clause *cl){
 	  printf("\nl : %d\n",l);
 	  cl=choicelit(l,cl);
 	  printclauses(*cl);
-		//vérification littéraux 
+		//vérification littéraux
 		i++;
   }
   return 1;
@@ -268,11 +269,11 @@ int main(int argc,char **argv){
   clause *cl;
   lit li;
   li.l=malloc(sizeof(int*)*100);
-  cl=malloc(sizeof(clause));
+  //cl=malloc(sizeof(clause));
   //clauselit *cl;
   //cl=malloc(sizeof(clauselit));
 
-  cl=readfic(argv[1],cl);
+  cl=readfic(argv[1]);
   printclauses(*cl);
   printf("\n");
   /*
