@@ -126,7 +126,23 @@ typedef struct{
  }
 
 
- int dpll(){}
+int dpll(clause cl){
+  int i,n;
+  if(empty(cl))
+    return 1;
+  if(inconsistent(cl,l_prises))
+    return 0;
+  //vérifie mono-littéraux
+  for(i=0;i<cl.size && size(cl.C)!=1;i++);
+  if(i!=cl.size)
+    l=cl.C[i][0];
+  else{
+    //vérification littéraux purs
+    n=max(cl); //maxsize of clause
+    for(i=0;i<cl.size;i++)
+      for(int j=0;j<n;j++)
+  }
+}
 
 int main(int argc,char **argv){
   clause *cl;
