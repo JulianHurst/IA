@@ -86,26 +86,27 @@ typedef struct{
     printf("size : %d\n",size);
 		rewind(fp);
     cl->size=size;
-		cl->C=malloc(sizeof(int*)*size+1);
-		for(i=0;i<size;i++)
-			cl->C[i]=malloc(sizeof(lit*)*size);
+		cl->C=malloc(sizeof(lit*)*size);
+		for(int i=0;i<cl->size;i++)
+		  cl->C[i].l=malloc(sizeof(int*)*100);
+
     i=0;
 		while((ch=fgetc(fp))!=EOF){
 			while(ch!='\n'){
 				if(ch=='-'){
           ch=fgetc(fp);
-          cl->C[i][j]=(int)ch-96;
-          cl->C[i][j]=cl->C[i][j]*2;
+          cl->C[i].l[j]=(int)ch-96;
+          cl->C[i].l[j]=cl->C[i].l[j]*2;
           j++;
         }
         else if(ch!=' '){
-					cl->C[i][j]=(int)ch-96;
-          cl->C[i][j]=cl->C[i][j]*2-1;
+					cl->C[i].l[j]=(int)ch-96;
+          cl->C[i].l[j]=cl->C[i].l[j]*2-1;
 					j++;
 				}
         ch=fgetc(fp);
 			}
-      cl->C[i][j]=0;
+      cl->C[i].l[j]=0;
       j=0;
 			i++;
 		 }
@@ -125,13 +126,13 @@ typedef struct{
 //affiche les clauses pour la structure avec tableau de INT
  void printclauses(clause cl){
   for(int i=0;i<cl.size;i++){
-    for(int j=0;cl.C[i][j]!=0;j++)
-      printf("%d ",cl.C[i][j]);
+    for(int j=0;cl.C[i].l[j]!=0;j++)
+      printf("%d ",cl.C[i].l[j]);
     printf("\n");
   }
  }
 
-
+/*
 int empty(clause cl){
   for(int i=0;i<cl.size;i++)
     
@@ -140,38 +141,106 @@ int empty(clause cl){
 int size(int *cl){
   for 
 }
+*/
 
-int inconsistent(clause cl, int *taken){
+int findlit(int x,lit taken){
+  for(int i=0;i<taken.size;i++)
+    if(taken.l[i]==x)
+      return i;
+  return -1;
+}
+
+int findcl(int x,clause cl){
+  for(int i=0;i<cl.size;i++)
+    for(int j=0;j<cl.C[i].size;j++)
+      if(cl.C[i].l[j]==x)
+        return 1;
+  return 0;
+
+}
+
+int inconsistent(clause cl, lit taken){
   int n=max(cl);
   for(int i=0;i<cl.size;i++)
-    for(int j=0;j<n;j++)
-      
+    if(cl.C[i].size==1)
+      if(!(cl.C[i].l[0]%2)){
+        if(findlit(cl.C[i].l[0]-1,taken)!=-1)
+	  return 1;
+      }
+      else
+        if(findlit(cl.C[i].l[0]+1,taken)!=-1)
+          return 1;
+  return 0; 
 }
+
+int monolit(clause cl){
+  for(int i=0;i<cl.size;i++)
+    if(cl.C[i].size==0)
+      return cl.C[i].l[0];
+  return 0;
+}
+
+int veriflitpurs(clause cl){
+  int x;
+  for(int i=0;i<cl.size;i++)
+    for(int j=0;j<cl.C[i].size;j++){
+      x=cl.C[i].l[j];
+      if(x%2==0){
+        if(!findcl(x-1,cl))
+          return x;
+      }
+      else if(!findcl(x+1,cl))
+        return x;
+    }
+}
+
+int choicelit(int l,clause cl){
+  int x=0;
+  for(int i=0;i<cl.size;i++){
+    if(findlit(l,cl.C[i])!=-1){
+      for(int t=i;t<cl.size-1;t++)
+        cl.C[t]=cl.C[t+1]
+      cl.C[t]=NULL;
+    }
+    if(l%2==0)
+      if((x=findlit(l-1,cl.C[i]))!=-1)
+	//adjust list like above and decrement size
+        cl.C[i].l[x]
+  }
+}
+
+/*
+1 a
+2 -a
 
 (p v q) n -q n (-p v q v -r)
 
 (p v q v -r) n (p v -q) n -p n r n u
+*/
 
 int dpll(clause cl){
-  int i,n;
+  int i=0,n;
+  int *taken;
+  taken=malloc(sizeof(int*)*100);	//*nblitt
   //Si vide renvoie vrai
-  if(empty(cl))
-    return 0;
+  while(cl.size!=0){
   // si pb renvoie faux
   if(inconsistent(cl,l_prises))
-    return 1;
+    return 0;
   //vérifie mono-littéraux
-  for(i=0;i<cl.size && size(cl.C)!=1;i++);
-  if(i!=cl.size)
-    l=cl.C[i][0];
-  else{
-    //vérification littéraux pu
-    veriflitpurs(cl);
-    n=max(cl); //maxsize of clause
-    for(i=0;i<cl.size;i++)
-      for(int j=0;j<n;j++)
+  if(l=monolit(cl));
+  else if(l=veriflitpurs(cl));
+  else
+    l=cl.C[0].l[0];
+  taken[i]=l;
+  chocelit(l,cl);
+    //vérification littéraux 
+    i++;
   }
+  return 1;
 }
+
+
 
 int main(int argc,char **argv){
   clause *cl;
