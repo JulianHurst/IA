@@ -30,8 +30,14 @@ typedef struct{
 
 typedef struct{
   int size;
-  int **C;
+  int *l;
+}lit;
+
+typedef struct{
+  int size;
+  lit *C;
 }clause;
+
 
 
 //lit les clauses dans un tableau 2D de CHAR
@@ -82,7 +88,7 @@ typedef struct{
     cl->size=size;
 		cl->C=malloc(sizeof(int*)*size+1);
 		for(i=0;i<size;i++)
-			cl->C[i]=malloc(sizeof(int*)*size);
+			cl->C[i]=malloc(sizeof(lit*)*size);
     i=0;
 		while((ch=fgetc(fp))!=EOF){
 			while(ch!='\n'){
@@ -126,7 +132,46 @@ typedef struct{
  }
 
 
- int dpll(){}
+int empty(clause cl){
+  for(int i=0;i<cl.size;i++)
+    
+}
+
+int size(int *cl){
+  for 
+}
+
+int inconsistent(clause cl, int *taken){
+  int n=max(cl);
+  for(int i=0;i<cl.size;i++)
+    for(int j=0;j<n;j++)
+      
+}
+
+(p v q) n -q n (-p v q v -r)
+
+(p v q v -r) n (p v -q) n -p n r n u
+
+int dpll(clause cl){
+  int i,n;
+  //Si vide renvoie vrai
+  if(empty(cl))
+    return 0;
+  // si pb renvoie faux
+  if(inconsistent(cl,l_prises))
+    return 1;
+  //vérifie mono-littéraux
+  for(i=0;i<cl.size && size(cl.C)!=1;i++);
+  if(i!=cl.size)
+    l=cl.C[i][0];
+  else{
+    //vérification littéraux pu
+    veriflitpurs(cl);
+    n=max(cl); //maxsize of clause
+    for(i=0;i<cl.size;i++)
+      for(int j=0;j<n;j++)
+  }
+}
 
 int main(int argc,char **argv){
   clause *cl;
