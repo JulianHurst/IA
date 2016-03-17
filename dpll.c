@@ -136,6 +136,7 @@ typedef struct{
   }
  }
  
+//Affiche les clauses pour la structure avec tableau de INT en CHAR
 void printclausesch(clause cl){
   for(int i=0;i<cl.size;i++){
     for(int j=0;j<cl.C[i].size;j++){
@@ -166,6 +167,7 @@ int findcl(int x,clause cl){
 
 }
 
+//Renvoie 1 s'il y a une inconsistence dans l'ensemble de clauses (pas satisfiable)
 int inconsistent(clause cl, lit taken){
   //int n=max(cl);
   for(int i=0;i<cl.size;i++)
@@ -214,6 +216,7 @@ int veriflitpurs(clause cl){
     return 0;
 }
 
+//Confirme le choix d'un littéral et effectue les modifications nécessaires
 clause *choicelit(int l,clause *cl){
   int x=0,t=0,reset=0;
   for(int i=0;i<cl->size;i++){
@@ -251,6 +254,8 @@ clause *choicelit(int l,clause *cl){
 
 (p v q v -r) n (p v -q) n -p n r n u
 */
+
+//Applique dpll sur un ensemble de clauses
 int dpll(clause *cl){
   int i=0,l;
   lit taken;
