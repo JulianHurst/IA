@@ -324,7 +324,7 @@ int chooseunsignedlit(clause cl){
   return 0;
 }
 
-int back(clause cl,lit takenrand){
+int back(lit takenrand){
   for(int i=takenrand.size-1;i>=0;i--){
     if(takenrand.l[i]%2==0){
       if(findlit(takenrand.l[i]-1,takenrand)==-1)
@@ -338,49 +338,88 @@ int back(clause cl,lit takenrand){
   return 0;
 }
 
+clause * rollback(clause *cl, lit taken, int b){
+	for(int i=0;i<b;i++)
+	  cl=choicelit(taken.l[i],cl);
+	return cl;
+}
+
+clause * copy(clause *cl){
+	clause *tmp;
+	tmp=malloc(sizeof(clause *));
+	tmp->C=malloc(sizeof(lit*)*(cl->size*2));
+	tmp->size=cl->size;
+	for(int i=0;i<cl->size;i++)
+		  tmp->C[i].l=malloc(sizeof(int*)*50);
+	for(int i=0;i<cl->size;i++)
+		for(int j=0;j<cl->C[i].size;j++){
+			tmp->C[i].size=cl->C[i].size;
+			tmp->C[i].l[j]=cl->C[i].l[j];
+		}
+	return tmp;
+}
+
+clause * stupidcopy(clause *cl){
+	return cl;
+}
+
 /*taken_all contains all taken litterals since start of dpll
   taken contains taken litterals for a given path in dpll
   check taken for pure litteral
   delete all taken litterals after pure litteral from taken
   take opposite polarity of litteral or next litteral
   repeat till taken_all contains all litterals
-
+*/
 
 //takenrand = litts taken randomly
 
 //Applique dpll sur un ensemble de clauses
 int dpll_all(clause *cl){
-  int i=0,l,random=0;
+  int i=0,l,random=0,b;
   lit taken_all,taken,takenrand;
-  clause tmp;
+  clause *tmp;
   tmp=copy(cl);
   taken.size=0;
   taken.l=malloc(sizeof(int*)*100);
+    takenrand.size=0;
+  takenrand.l=malloc(sizeof(int*)*100);
   //Si vide renvoie vrai
-  //REPLACE WITH something ! Maybe while pure lit exists in takenrand
-  while(!all(*cl,taken_all)){
+  //REPLACE WITH something ! Maybe while pure lit exists in takenrand maybe same as above 
+  while(cl->size!=0){
+      l=0;
 	  // si pb renvoie faux
-	  if(inconsistent(*cl,taken)){
+	  if(inconsistent(*cl)){
       if(random){
-        if((l=back(*cl,taken))==0)  //go back to last non pure litteral (from back to front) taken randomly
-          return 0
+        if((l=back(takenrand))==0)  //go back to last pure litteral (from back to front) taken randomly
+          return 0;
+        else{
+          if(l%2==0)
+            b=findlit(l-1,taken);
+          else
+            b=findlit(l+1,taken);
+          taken.l[b]=l;
+          cl=rollback(tmp,taken,b);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)
+          //maybe resize takenrand
+      }
       }
       else
 		    return 0;
     }
+      if(l==0){
 	  //vérifie mono-littéraux ou lit purs
 	  if((l=monolit(*cl)));
 	  else if((l=veriflitpurs(*cl)));
 	  else{
-      random=1;
+      	random=1;
 		  l=chooseunsignedlit(*cl);
-      takenrand.l[i]=l;
-      takenrand.size++;
+      	takenrand.l[i]=l;
+      	takenrand.size++;
+    }
     }
 	  taken.l[i]=l;
     taken.size++;
-    taken_all.l[i]=l;
-    taken_all.size++;
+    //taken_all.l[i]=l;
+    //taken_all.size++;
 	  if(l%2==0)
 		  printf("l : -%c\n",l/2+96);
     else
@@ -396,10 +435,11 @@ int dpll_all(clause *cl){
   }
   return 1;
 }
-*/
+
 int main(int argc,char **argv){
   int ret=0;
   clause *cl;
+  clause *tmp;
   /*
   lit li;
   li.l=malloc(sizeof(int*)*100);
@@ -414,10 +454,16 @@ int main(int argc,char **argv){
 
   cl=readfic(argv[1]);
   //printclauses(*cl);
+  tmp=copy(cl);
+  //cl=choicelit(1,cl);
+  //printclausesch(*cl);
+  //printf("Salut\n");
+  //printclausesch(*tmp);
+  
   printclausesch(*cl);
   printf("\n");
 
-  if((ret=dpll(cl)))
+  if((ret=dpll_all(cl)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
