@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-W -Wall -ansi -pedantic -std=c99
+CFLAGS=-W -Wall -ansi -pedantic -std=c99 -g
 LDFLAGS=
 EXEC=dpll
 i=thing

@@ -115,7 +115,30 @@ typedef struct{
 		 }
 		 fclose(fp);
 	 }
+	 else{
+		fprintf(stderr,"Le fichier \"%s\" à lire n'a pas pu être ouvert en lecture\n",file);
+		return NULL;
+	}
 	 return cl;
+ }
+ 
+ void exportfic(char *file,clause *cl){
+	 FILE *fp;
+	 fp=fopen(file,"w");
+	 if(fp){
+		 for(int i=0;i<cl->size;i++){
+			for(int j=0;j<cl->C[i].size;j++){
+				if(j+1<cl->C[i].size)
+					fprintf(fp,"%d ",cl->C[i].l[j]);
+				else
+					fprintf(fp,"%d",cl->C[i].l[j]);
+			}
+			fprintf(fp,"\n");
+		}
+		fclose(fp);
+	 }
+	 else
+		fprintf(stderr,"Le fichier \"%s\" à exporter n'a pas pu être ouvert en écriture\n",file);
  }
 
 //affiche les clauses pour la structure avec tableau de CHARR
@@ -191,8 +214,7 @@ int inconsistent(clause cl, lit taken){
 }
 */
 //Renvoie 1 s'il y a une inconsistence dans l'ensemble de clauses (pas satisfiable)
-int inconsistent(clause cl){
-  //int n=max(cl);
+int inconsistent(clause cl){  
   for(int i=0;i<cl.size;i++)
     if(cl.C[i].size==1){
       if(!(cl.C[i].l[0]%2)){
@@ -345,8 +367,8 @@ clause * rollback(clause *cl, lit taken, int b){
 }
 
 clause * copy(clause *cl){
-	clause *tmp;
-	tmp=malloc(sizeof(clause *));
+	clause *tmp;		
+	tmp=malloc(sizeof(clause));
 	tmp->C=malloc(sizeof(lit*)*(cl->size*2));
 	tmp->size=cl->size;
 	for(int i=0;i<cl->size;i++)
@@ -359,10 +381,81 @@ clause * copy(clause *cl){
 	return tmp;
 }
 
-clause * stupidcopy(clause *cl){
-	return cl;
+int find(int x,int *T){
+	for(int i=0;T[i]!=0;i++)
+		if(T[i]==x)
+			return i;
+	return -1;
 }
 
+//Choisit le littéral qui apparait le plus dans la base de clauses
+int firstsatisfy(clause cl){
+	printf("firstsat\n");
+	int count=0,k=0,max=0,max_ind=0;
+	int *x;
+	x=malloc(sizeof(int*));
+	x[k]=0;
+	for(int i=0;i<cl.size;i++){
+		for(int j=0;j<cl.C[i].size;j++){
+			if(find(cl.C[i].l[j],x)==-1){
+				x[k]=cl.C[i].l[j];
+				x[k+1]=0;				
+				for(int p=i;p<cl.size;p++)
+					for(int q=0;q<cl.C[p].size;q++)
+						if(cl.C[p].l[q]==x[k])
+							count++;			
+				if(count>max){
+					max=count;
+					max_ind=k;
+				}
+				k++;
+			}
+			count=0;
+		}
+	}
+	
+	return x[max_ind];
+}
+
+//QUI APPARAIT LE PLUS
+int firstfail(clause cl){		
+	for(int i=0;i<cl.size;i++){
+		for(int j=0;j<cl.C[i].size;j++){
+			if((cl.C[i].l[j]%2)!=0){
+				if(findcl(cl.C[i].l[j]+1,cl))
+					return cl.C[i].l[j];
+			}
+			else
+				if(findcl(cl.C[i].l[j]-1,cl))
+					return cl.C[i].l[j];			
+		}
+	}
+	return 0;
+}
+/*
+int firstfailbis(clause cl){
+	int l,big=0;
+	for(int i=0;i<cl.size;i++)
+		if(cl.size>big)
+			big=cl.size;
+	for(int i=0;i<cl.size;i++){
+		for(int j=0;j<cl.C[i].size;j++){
+			if((cl.C[i].l[j]%2)!=0){
+				if(findcl(cl.C[i].l[j]+1,cl))
+					return cl.C[i].l[j];
+			}
+			else
+				if(findcl(cl.C[i].l[j]-1,cl))
+					return cl.C[i].l[j];			
+		}
+	}
+}
+
+int countlit(int l,clause cl){
+	for(int i=0;i<cl.size;i++)
+		for(int j=0;j<cl.C[i].size;j++)		
+}
+*/
 /*taken_all contains all taken litterals since start of dpll
   taken contains taken litterals for a given path in dpll
   check taken for pure litteral
@@ -374,10 +467,10 @@ clause * stupidcopy(clause *cl){
 //takenrand = litts taken randomly
 
 //Applique dpll sur un ensemble de clauses
-int dpll_all(clause *cl){
-  int i=0,l,random=0,b;
+int dpll_all(clause *cl,int h){
+  int i=0,l,random=0,b,r=0;
   lit taken,takenrand;
-  clause *tmp;
+  clause *tmp;  
   tmp=copy(cl);
   taken.size=0;
   taken.l=malloc(sizeof(int*)*100);
@@ -398,6 +491,9 @@ int dpll_all(clause *cl){
           else
             b=findlit(l+1,taken);
           taken.l[b]=l;
+          takenrand.l[r]=l;
+          takenrand.size++;
+          r++;
           cl=rollback(tmp,taken,b);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)
           //maybe resize takenrand
       }
@@ -411,15 +507,18 @@ int dpll_all(clause *cl){
 	  else if((l=veriflitpurs(*cl)));
 	  else{
       	random=1;
-		  l=chooseunsignedlit(*cl);
-      	takenrand.l[i]=l;
+      	if(h==1)
+			l=firstsatisfy(*cl);
+		else
+			l=chooseunsignedlit(*cl);
+		printf("takenrand : %d\n",l);
+      	takenrand.l[r]=l;
       	takenrand.size++;
-    }
+      	r++;
+	  }
     }
 	  taken.l[i]=l;
     taken.size++;
-    //taken_all.l[i]=l;
-    //taken_all.size++;
 	  if(l%2==0)
 		  printf("l : -%c\n",l/2+96);
     else
@@ -452,18 +551,13 @@ int main(int argc,char **argv){
 	return -1;
   }
 
-  cl=readfic(argv[1]);
-  //printclauses(*cl);
-  //tmp=copy(cl);
-  //cl=choicelit(1,cl);
-  //printclausesch(*cl);
-  //printf("Salut\n");
-  //printclausesch(*tmp);
+  if((cl=readfic(argv[1]))==NULL)
+	return -1; 
   
   printclausesch(*cl);
   printf("\n");
 
-  if((ret=dpll_all(cl)))
+  if((ret=dpll_all(cl,1)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
