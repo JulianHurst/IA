@@ -78,12 +78,12 @@ typedef struct{
  clause *readfic(char *file){
    clause *cl;
 	FILE *fp;
-	int ch,i,j=0,size=0;
+	int ch,i,j=0,size=0;	
 	fp=fopen(file,"r");
 	if(fp){
-		while((ch=fgetc(fp))!=EOF){
+		while((ch=fgetc(fp))!=EOF){			
 			if(ch=='\n')
-				size++;
+				size++;			
 		}
     printf("size : %d\n",size);
 		rewind(fp);
@@ -94,28 +94,27 @@ typedef struct{
 		  cl->C[i].l=malloc(sizeof(int*)*50);
 		  memset(cl->C[i].l,0,sizeof(int*)*50);
 		}
-
     i=0;
-		while((ch=fgetc(fp))!=EOF){
+	while((ch=fgetc(fp))!=EOF){
 		while(ch!='\n'){
-				if(ch=='-'){
-          ch=fgetc(fp);
-          cl->C[i].l[j]=(int)ch-96;
-          cl->C[i].l[j]=cl->C[i].l[j]*2;
-          j++;
-        }
-        else if(ch!=' '){
-					cl->C[i].l[j]=(int)ch-96;
-          cl->C[i].l[j]=cl->C[i].l[j]*2-1;
-					j++;
-				}
-        ch=fgetc(fp);
+			if(ch=='-'){
+				ch=fgetc(fp);
+				cl->C[i].l[j]=(int)ch-96;
+				cl->C[i].l[j]=cl->C[i].l[j]*2;
+				j++;
 			}
-			cl->C[i].size=j;
-      cl->C[i].l[j]=0;
-      j=0;
-			i++;
-		 }
+			else if(ch!=' '){
+				cl->C[i].l[j]=(int)ch-96;
+				cl->C[i].l[j]=cl->C[i].l[j]*2-1;
+				j++;
+			}
+			ch=fgetc(fp);
+		}
+		cl->C[i].size=j;
+		//cl->C[i].l[j]=0;
+		j=0;
+		i++;
+	 }
 		 fclose(fp);
 	 }
 	 else{
@@ -431,21 +430,41 @@ int firstsatisfy(clause cl){
 	return x[max_ind];
 }
 
-//QUI APPARAIT LE PLUS
-int firstfail(clause cl){		
+//L'oppposé QUI APPARAIT LE PLUS
+int firstfail(clause cl){			
+	printf("firstfail\n");
+	int count=0,k=0,max=0,max_ind=0;
+	int *x;
+	x=malloc(sizeof(int*)*20);
+	memset(x,0,sizeof(int*)*20);
+	x[k]=0;
 	for(int i=0;i<cl.size;i++){
 		for(int j=0;j<cl.C[i].size;j++){
-			if((cl.C[i].l[j]%2)!=0){
-				if(findcl(cl.C[i].l[j]+1,cl))
-					return cl.C[i].l[j];
+			if(find(cl.C[i].l[j],x)==-1){
+				x[k]=cl.C[i].l[j];
+				x[k+1]=0;				
+				for(int p=i;p<cl.size;p++)
+					for(int q=0;q<cl.C[p].size;q++)
+						if(x[k]%2==0){
+							if(cl.C[p].l[q]==x[k]-1)
+								count++;			
+						}
+						else
+							if(cl.C[p].l[q]==x[k]+1)
+								count++;											
+				if(count>max){
+					max=count;
+					max_ind=k;
+				}
+				k++;
 			}
-			else
-				if(findcl(cl.C[i].l[j]-1,cl))
-					return cl.C[i].l[j];			
+			count=0;
 		}
 	}
-	return 0;
+	
+	return x[max_ind];
 }
+
 /*
 int firstfailbis(clause cl){
 	int l,big=0;
@@ -596,6 +615,8 @@ int dpll_all_sol(clause *cl,int h){
       	random=1;
       	if(h==1)
 			l=firstsatisfy(*cl);
+		else if(h==2)
+			l=firstfail(*cl);
 		else
 			l=chooseunsignedlit(*cl);		
       	takenrand.l[r]=l;
@@ -643,7 +664,7 @@ int main(int argc,char **argv){
   printclausesch(*cl);
   printf("\n");	
 	
-  if((ret=dpll_all_sol(cl,0)))
+  if((ret=dpll_all_sol(cl,2)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
