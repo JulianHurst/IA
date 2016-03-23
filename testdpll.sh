@@ -1,2 +1,2 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/bin/bash
 for i in testsat/*; do echo -e "\n\033[0;31m$i :\033[0m\n" && ./dpll "$i";done
