@@ -1,4 +1,5 @@
-a b
--a -b
+a b c
+-b a -c
+-a -b 
 -b c
--c a
+-c -a

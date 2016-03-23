@@ -446,12 +446,66 @@ int firstfail(clause cl){
 				for(int p=i;p<cl.size;p++)
 					for(int q=0;q<cl.C[p].size;q++)
 						if(x[k]%2==0){
-							if(cl.C[p].l[q]==x[k]-1)
+							if(cl.C[p].l[q]==x[k]-1)								
 								count++;			
 						}
 						else
 							if(cl.C[p].l[q]==x[k]+1)
 								count++;											
+				if(count>max){
+					max=count;
+					max_ind=k;
+				}
+				k++;
+			}
+			count=0;
+		}
+	}
+	
+	return x[max_ind];
+}
+
+int firstfailbis(clause cl){			
+	printf("firstfailbis\n");	
+	int count=0,k=0,max=0,max_ind=0,size=0,neq=0;
+	for(int i=0;i<cl.size;i++){
+		if(cl.C[i].size>size)
+			size=cl.C[i].size;
+	}
+	for(int i=0;i<cl.size;i++)
+		if(cl.C[i].size<size)
+			neq=1;
+	int *x;
+	x=malloc(sizeof(int*)*20);
+	memset(x,0,sizeof(int*)*20);
+	x[k]=0;
+	for(int i=0;i<cl.size;i++){
+		for(int j=0;j<cl.C[i].size;j++){
+			if(find(cl.C[i].l[j],x)==-1){
+				x[k]=cl.C[i].l[j];
+				x[k+1]=0;				
+				for(int p=i;p<cl.size;p++)
+					for(int q=0;q<cl.C[p].size;q++)
+						if(x[k]%2==0){
+							if(cl.C[p].l[q]==x[k]-1){
+								if(neq){
+									if(cl.C[p].l[q]<size)
+										count++;
+								}
+								else
+									count++;
+							}
+						}
+						else{
+							if(cl.C[p].l[q]==x[k]+1){
+								if(neq){
+									if(cl.C[p].l[q]<size)
+										count++;
+								}
+								else
+									count++;
+							}
+						}
 				if(count>max){
 					max=count;
 					max_ind=k;
@@ -500,6 +554,7 @@ int countlit(int l,clause cl){
 //takenrand = litts taken randomly
 
 //Applique dpll sur un ensemble de clauses
+/*
 int dpll_all(clause *cl,int h){
   int i=0,l,random=0,b,r=0;
   lit taken,takenrand;
@@ -522,8 +577,11 @@ int dpll_all(clause *cl,int h){
           if(l%2==0)
             b=findlit(l-1,taken);
           else
-            b=findlit(l+1,taken);
-          taken.l[b]=l;
+            b=findlit(l+1,taken);          
+          taken.l[k]=l;
+          taken.size=k+1;
+          for(int p=0;taken.size;p++)
+			taken.l[p]=0;
           takenrand.l[r]=l;
           takenrand.size++;
           r++;
@@ -567,22 +625,32 @@ int dpll_all(clause *cl,int h){
   }
   return 1;
 }
+* 
+* 
+* a e -e
+* a -a
+* a -a e
+* a -a e -e  
+* a -a e -e 
+* */
 
 int dpll_all_sol(clause *cl,int h){
-  int i=0,l,random=0,b,r=0,sat=0;
-  lit taken,takenrand;
+  int i=0,l,random=0,r=0,sat=0,k=0;
+  lit taken,takenrand,taken_all;
   clause *tmp;  
   tmp=copy(cl);
   taken.size=0;
-  taken.l=malloc(sizeof(int*)*100);
-  memset(taken.l,0,sizeof(int*)*100);  
+  taken.l=malloc(sizeof(int*)*100);  
   takenrand.size=0;
   takenrand.l=malloc(sizeof(int*)*100);  
+  taken_all.size=0;
+  taken_all.l=malloc(sizeof(int*)*100);
+  memset(taken_all.l,0,sizeof(int*)*100); 
   memset(taken.l,0,sizeof(int*)*100);
   memset(takenrand.l,0,sizeof(int*)*100);  
   //Si vide renvoie vrai
   //REPLACE WITH something ! Maybe while pure lit exists in takenrand maybe same as above 
-  while(!all(*tmp,taken)){
+  while(!all(*tmp,taken_all)){
       l=0;
       if(!inconsistent(*cl) && cl->size==0)
 		sat=1;
@@ -592,15 +660,26 @@ int dpll_all_sol(clause *cl,int h){
         if((l=back(takenrand))==0)  //go back to last pure litteral (from back to front) taken randomly          
           return sat;		
         else{
-          if(l%2==0)
-            b=findlit(l-1,taken);
-          else
-            b=findlit(l+1,taken);
-          taken.l[b]=l;
-          takenrand.l[r]=l;
-          takenrand.size++;
-          r++;          
-          cl=rollback(tmp,taken,b);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)          
+          if(l%2==0){
+            k=findlit(l-1,taken);
+            r=findlit(l-1,takenrand);
+		  }
+          else{
+            k=findlit(l+1,taken);
+            r=findlit(l+1,takenrand);
+		  }
+          taken.l[k]=l;
+          for(int p=k+1;i<taken.size;p++)
+			taken.l[p]=0;        
+		  taken.size=k+1;
+		  k++;
+          takenrand.l[r+1]=l;
+          for(int p=r+2;i<takenrand.size;p++)
+			takenrand.l[p]=0; 
+          takenrand.size=r+2;
+          r+=2; 
+          printf("rollback k %d\n",k);         
+          cl=rollback(tmp,taken,k);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)          
           //maybe resize takenrand
 		}
       }
@@ -617,19 +696,25 @@ int dpll_all_sol(clause *cl,int h){
 			l=firstsatisfy(*cl);
 		else if(h==2)
 			l=firstfail(*cl);
+		else if(h==3)
+			l=firstfailbis(*cl);
 		else
 			l=chooseunsignedlit(*cl);		
       	takenrand.l[r]=l;
       	takenrand.size++;
       	r++;
 	  }
-    }
-	  taken.l[i]=l;
+	taken.l[k]=l;
     taken.size++;
+    k++;
+	}
+    taken_all.l[i]=l;
+    taken_all.size++;
 	  if(l%2==0)
 		  printf("l : -%c\n",l/2+96);
     else
 		  printf("l : %c\n",(l+1)/2+96);
+	  //printclausesch(*cl);
 	  choicelit(l,cl);
 	  printclausesch(*cl);
 	  if(cl->size==0)
@@ -653,8 +738,8 @@ int main(int argc,char **argv){
   clauselit *cl;
   cl=malloc(sizeof(clauselit));
   */
-  if(argc-1!=1){
-	fprintf(stderr,"USAGE : %s fichier.sat\n",argv[0]);
+  if(argc-1!=2){
+	fprintf(stderr,"USAGE : %s fichier.sat heuristique\n",argv[0]);
 	return -1;
   }
 
@@ -664,7 +749,7 @@ int main(int argc,char **argv){
   printclausesch(*cl);
   printf("\n");	
 	
-  if((ret=dpll_all_sol(cl,2)))
+  if((ret=dpll_all_sol(cl,atoi(argv[2]))))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
