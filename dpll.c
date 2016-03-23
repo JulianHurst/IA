@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* a = 1
  * -a=2
@@ -89,8 +90,10 @@ typedef struct{
 		cl=malloc(sizeof(clause*));
 		cl->size=size;
 		cl->C=malloc(sizeof(lit*)*(2*size));
-		for(int i=0;i<cl->size;i++)
+		for(int i=0;i<cl->size;i++){
 		  cl->C[i].l=malloc(sizeof(int*)*50);
+		  memset(cl->C[i].l,0,sizeof(int*)*50);
+		}
 
     i=0;
 		while((ch=fgetc(fp))!=EOF){
@@ -258,7 +261,7 @@ int veriflitpurs(clause cl){
 }
 
 //Confirme le choix d'un littéral et effectue les modifications nécessaires
-clause *choicelit(int l,clause *cl){
+void choicelit(int l,clause *cl){
   int x=0,t=0,reset=0;
   for(int i=0;i<cl->size;i++){
     if(findlit(l,cl->C[i])!=-1){
@@ -284,7 +287,7 @@ clause *choicelit(int l,clause *cl){
 		reset=0;
 	}
   }
-  return cl;
+  //return cl;
 }
 
 /*
@@ -318,7 +321,7 @@ int dpll(clause *cl){
 		printf("l : -%c\n",l/2+96);
       else
 		printf("l : %c\n",(l+1)/2+96);
-	  cl=choicelit(l,cl);
+	  choicelit(l,cl);
 	  printclausesch(*cl);
 	  if(cl->size==0)
 		printf("vide\n\n");
@@ -331,10 +334,16 @@ int dpll(clause *cl){
 }
 
 int all(clause cl,lit taken_all){
+	//printclauses(cl);
+	//printf("size : %d\n",cl.size);
+  for(int i=0;i<6;i++)
+	//printf("%d\n",taken_all.l[i]);
   for(int i=0;i<cl.size;i++)
-    for(int j=0;j<cl.C[i].size;j++)
+    for(int j=0;j<cl.C[i].size;j++){
+		//printf("t %d\n",cl.C[i].l[j]);
       if(findlit(cl.C[i].l[j],taken_all)==-1)
         return 0;
+	}
   return 1;
 }
 
@@ -360,24 +369,28 @@ int back(lit takenrand){
   return 0;
 }
 
-clause * rollback(clause *cl, lit taken, int b){
-	for(int i=0;i<b;i++)
-	  cl=choicelit(taken.l[i],cl);
-	return cl;
-}
-
 clause * copy(clause *cl){
 	clause *tmp;		
 	tmp=malloc(sizeof(clause));
 	tmp->C=malloc(sizeof(lit*)*(cl->size*2));
 	tmp->size=cl->size;
-	for(int i=0;i<cl->size;i++)
-		  tmp->C[i].l=malloc(sizeof(int*)*50);
+	for(int i=0;i<cl->size;i++){
+		  tmp->C[i].l=malloc(sizeof(int*)*cl->C[i].size);
+		  memset(tmp->C[i].l,0,sizeof(int*)*cl->C[i].size);
+	 }
 	for(int i=0;i<cl->size;i++)
 		for(int j=0;j<cl->C[i].size;j++){
 			tmp->C[i].size=cl->C[i].size;
 			tmp->C[i].l[j]=cl->C[i].l[j];
 		}
+	return tmp;
+}
+
+clause * rollback(clause *cl, lit taken, int b){
+	clause *tmp;
+	tmp=copy(cl);
+	for(int i=0;i<b;i++)
+	  choicelit(taken.l[i],tmp);	
 	return tmp;
 }
 
@@ -393,7 +406,8 @@ int firstsatisfy(clause cl){
 	printf("firstsat\n");
 	int count=0,k=0,max=0,max_ind=0;
 	int *x;
-	x=malloc(sizeof(int*));
+	x=malloc(sizeof(int*)*20);
+	memset(x,0,sizeof(int*)*20);
 	x[k]=0;
 	for(int i=0;i<cl.size;i++){
 		for(int j=0;j<cl.C[i].size;j++){
@@ -523,7 +537,7 @@ int dpll_all(clause *cl,int h){
 		  printf("l : -%c\n",l/2+96);
     else
 		  printf("l : %c\n",(l+1)/2+96);
-	  cl=choicelit(l,cl);
+	  choicelit(l,cl);
 	  printclausesch(*cl);
 	  if(cl->size==0)
 		  printf("ensemble vide\n\n");
@@ -532,6 +546,78 @@ int dpll_all(clause *cl,int h){
 		//vérification littéraux
 		i++;
   }
+  return 1;
+}
+
+int dpll_all_sol(clause *cl,int h){
+  int i=0,l,random=0,b,r=0,sat=0;
+  lit taken,takenrand;
+  clause *tmp;  
+  tmp=copy(cl);
+  taken.size=0;
+  taken.l=malloc(sizeof(int*)*100);
+  memset(taken.l,0,sizeof(int*)*100);  
+  takenrand.size=0;
+  takenrand.l=malloc(sizeof(int*)*100);  
+  memset(taken.l,0,sizeof(int*)*100);
+  memset(takenrand.l,0,sizeof(int*)*100);  
+  //Si vide renvoie vrai
+  //REPLACE WITH something ! Maybe while pure lit exists in takenrand maybe same as above 
+  while(!all(*tmp,taken)){
+      l=0;
+      if(!inconsistent(*cl) && cl->size==0)
+		sat=1;
+	  // si pb renvoie faux
+	  if(inconsistent(*cl) || cl->size==0){
+      if(random){
+        if((l=back(takenrand))==0)  //go back to last pure litteral (from back to front) taken randomly          
+          return sat;		
+        else{
+          if(l%2==0)
+            b=findlit(l-1,taken);
+          else
+            b=findlit(l+1,taken);
+          taken.l[b]=l;
+          takenrand.l[r]=l;
+          takenrand.size++;
+          r++;          
+          cl=rollback(tmp,taken,b);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)          
+          //maybe resize takenrand
+		}
+      }
+      else
+		    return sat;
+      }
+      if(l==0){
+	  //vérifie mono-littéraux ou lit purs
+	  if((l=monolit(*cl)));
+	  else if((l=veriflitpurs(*cl)));
+	  else{
+      	random=1;
+      	if(h==1)
+			l=firstsatisfy(*cl);
+		else
+			l=chooseunsignedlit(*cl);		
+      	takenrand.l[r]=l;
+      	takenrand.size++;
+      	r++;
+	  }
+    }
+	  taken.l[i]=l;
+    taken.size++;
+	  if(l%2==0)
+		  printf("l : -%c\n",l/2+96);
+    else
+		  printf("l : %c\n",(l+1)/2+96);
+	  choicelit(l,cl);
+	  printclausesch(*cl);
+	  if(cl->size==0)
+		  printf("ensemble vide\n\n");
+	  else
+		  printf("\n");
+		//vérification littéraux
+		i++;
+  }  
   return 1;
 }
 
@@ -555,9 +641,9 @@ int main(int argc,char **argv){
 	return -1; 
   
   printclausesch(*cl);
-  printf("\n");
-
-  if((ret=dpll_all(cl,1)))
+  printf("\n");	
+	
+  if((ret=dpll_all_sol(cl,0)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
