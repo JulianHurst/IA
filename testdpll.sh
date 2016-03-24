@@ -1,2 +1,2 @@
-#!/bin/bash
-for i in testsat/*; do echo -e "\n\033[0;31m$i :\033[0m\n" && ./dpll "$i" "$1";done
+#!/data/data/com.termux/files/usr/bin/bash
+for i in testsat/test*; do echo -e "\n\033[0;31m$i :\033[0m\n" && ./dpll "$i" "$1";done

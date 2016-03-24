@@ -650,7 +650,8 @@ int dpll_all_sol(clause *cl,int h){
   memset(takenrand.l,0,sizeof(int*)*100);  
   //Si vide renvoie vrai
   //REPLACE WITH something ! Maybe while pure lit exists in takenrand maybe same as above 
-  while(!all(*tmp,taken_all)){
+  //while(!all(*tmp,taken_all)){
+  while(1){
       l=0;
       if(!inconsistent(*cl) && cl->size==0)
 		sat=1;
@@ -660,6 +661,7 @@ int dpll_all_sol(clause *cl,int h){
         if((l=back(takenrand))==0)  //go back to last pure litteral (from back to front) taken randomly          
           return sat;		
         else{
+	  //l=back(takenrand);	
           if(l%2==0){
             k=findlit(l-1,taken);
             r=findlit(l-1,takenrand);
