@@ -124,6 +124,46 @@ typedef struct{
 	 return cl;
  }
  
+ //lit les clauses dans un tableau 2D de INT selon où a=1 , -a=2 , b=3 ...
+ clause *readficnum(char *file){
+   clause *cl;
+	FILE *fp;
+	int ch,i,j=0,size=0;	
+	fp=fopen(file,"r");
+	if(fp){
+		while((ch=fgetc(fp))!=EOF){			
+			if(ch=='\n')
+				size++;			
+		}
+		printf("size : %d\n",size);
+		rewind(fp);
+		cl=malloc(sizeof(clause*));
+		cl->size=size;
+		cl->C=malloc(sizeof(lit*)*(2*size));
+		for(int i=0;i<cl->size;i++){
+		  cl->C[i].l=malloc(sizeof(int*)*50);
+		  memset(cl->C[i].l,0,sizeof(int*)*50);
+		}
+		i=0;
+		while(!feof(fp)){
+			fscanf(fp,"%d",&cl->C[i].l[j]);
+			ch=fgetc(fp);			
+			j++;
+			if(ch=='\n'){						
+				cl->C[i].size=j;
+				j=0;
+				i++;
+			}						
+		}	
+		fclose(fp);
+	}		 	
+	 else{
+		fprintf(stderr,"Le fichier \"%s\" à lire n'a pas pu être ouvert en lecture\n",file);
+		return NULL;
+	}
+	 return cl;
+ }
+ 
  void exportfic(char *file,clause *cl){
 	 FILE *fp;
 	 fp=fopen(file,"w");
@@ -712,22 +752,87 @@ int dpll_all_sol(clause *cl,int h){
 	}
     taken_all.l[i]=l;
     taken_all.size++;
-	  if(l%2==0)
+	/* if(l%2==0)
 		  printf("l : -%c\n",l/2+96);
     else
-		  printf("l : %c\n",(l+1)/2+96);
+		  printf("l : %c\n",(l+1)/2+96);*/
+	printf("l : %d\n",l);
 	  //printclausesch(*cl);
+	  //printclauses(*cl);
 	  choicelit(l,cl);
-	  printclausesch(*cl);
+	  printclauses(*cl);
 	  if(cl->size==0)
 		  printf("ensemble vide\n\n");
 	  else
 		  printf("\n");
 		//vérification littéraux
 		i++;
+	//printf("hi\n");
   }  
   return 1;
 }
+
+int fact(int n){
+	int x=1;
+	for(int i=1;i<=n;i++)
+		x*=i;
+	return x;
+}
+
+int comb(int n,int k){
+	return (fact(n) / (fact(k)*fact(n-k)));
+}
+
+void pigeongen(int n){
+	int l=1,k,x,q;
+	clause *cl;
+	cl=malloc(sizeof(clause*));
+	//FORMULE DU PROF
+	//cl->size=n+n*comb(n-1,2)+(n-1)*comb(n,2);
+	cl->size=n+n+(n-1)*comb(n,2);
+	printf("size : %d\n",cl->size);
+	cl->C=malloc(sizeof(lit*)*(2*cl->size));
+	for(int i=0;i<cl->size;i++){
+	  cl->C[i].l=malloc(sizeof(int*)*50);
+	  memset(cl->C[i].l,0,sizeof(int*)*50);
+	}	
+	for(int i=0;i<n;i++){
+		k=i+n;
+		cl->C[i].size=(n-1);
+		cl->C[k].size=(n-1);
+		for(int j=0;j<n-1;j++){			
+			cl->C[i].l[j]=l;
+			cl->C[k].l[j]=l+1;
+			l+=2;
+		}
+	}	
+	
+	x=l-(2*(n-1))+1;
+	q=l+4;
+	for(int i=0;i<(n-1);i++){
+		l=2*(i+1);
+		q=l+(2*(n-1));	
+		for(int j=(k+1);j<((k+1)+comb(n,2));j++){
+			//printf("%d %d %d %d %d\n",l,i,k, j,comb(n,2));
+			cl->C[j].size=2;
+			cl->C[j].l[0]=l;
+			cl->C[j].l[1]=q;
+			if(q==x){
+				l+=(2*(n-1));
+				q=l+(2*(n-1));
+			}
+			else
+				q+=(2*(n-1));	
+		}		
+		k+=comb(n,2);		
+		x+=2;
+	}	
+	//printclauses(*cl);
+	exportfic("satpig3",cl);
+	//return cl;
+}
+
+
 
 int main(int argc,char **argv){
   int ret=0;
@@ -745,18 +850,19 @@ int main(int argc,char **argv){
 	return -1;
   }
 
-  if((cl=readfic(argv[1]))==NULL)
+  if((cl=readficnum(argv[1]))==NULL)
 	return -1; 
   
-  printclausesch(*cl);
+  printclauses(*cl);
   printf("\n");	
 	
   if((ret=dpll_all_sol(cl,atoi(argv[2]))))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
+  //pigeongen(14);
   return ret;
-
+  
   /* TESTS Fonctionnels
   cl=choicelit(34,cl);
   //cl=choicelit(31,cl);
