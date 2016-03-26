@@ -35,7 +35,7 @@ typedef struct{
 }lit;
 
 typedef struct{
-  int size;
+  long size;
   lit *C;
 }clause;
 
@@ -772,25 +772,25 @@ int dpll_all_sol(clause *cl,int h){
   return 1;
 }
 
-int fact(int n){
-	int x=1;
+long fact(int n){
+	long x=1;
 	for(int i=1;i<=n;i++)
 		x*=i;
 	return x;
 }
 
-int comb(int n,int k){
+long comb(int n,int k){
 	return (fact(n) / (fact(k)*fact(n-k)));
 }
 
-void pigeongen(int n){
+void pigeongen(char *file,int n){
 	int l=1,k,x,q;
 	clause *cl;
 	cl=malloc(sizeof(clause*));
 	//FORMULE DU PROF
 	//cl->size=n+n*comb(n-1,2)+(n-1)*comb(n,2);
 	cl->size=n+n+(n-1)*comb(n,2);
-	printf("size : %d\n",cl->size);
+	printf("size : %ld\n",cl->size);
 	cl->C=malloc(sizeof(lit*)*(2*cl->size));
 	for(int i=0;i<cl->size;i++){
 	  cl->C[i].l=malloc(sizeof(int*)*50);
@@ -808,6 +808,7 @@ void pigeongen(int n){
 	}	
 	
 	x=l-(2*(n-1))+1;
+	printf("x : %d size %ld comb %ld f14 %ld\n",x,cl->size,comb(n,2),fact(n));
 	q=l+4;
 	for(int i=0;i<(n-1);i++){
 		l=2*(i+1);
@@ -828,7 +829,7 @@ void pigeongen(int n){
 		x+=2;
 	}	
 	//printclauses(*cl);
-	exportfic("satpig3",cl);
+	exportfic(file,cl);
 	//return cl;
 }
 
@@ -860,7 +861,16 @@ int main(int argc,char **argv){
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
-  //pigeongen(14);
+	
+  /*pigeongen("satpig14",14);
+  pigeongen("satpig13",13);
+  pigeongen("satpig12",12);
+  pigeongen("satpig11",11);*/
+  //pigeongen("satpig6",6);
+  //pigeongen("satpig10",10);
+  //pigeongen("satpig7",7);
+  //pigeongen("satpig8",8);
+  //pigeongen("satpig9",9);
   return ret;
   
   /* TESTS Fonctionnels
