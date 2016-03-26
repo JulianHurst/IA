@@ -194,6 +194,7 @@ typedef struct{
 
 //affiche les clauses pour la structure avec tableau de INT
  void printclauses(clause cl){
+	 printf("size : %ld\n",cl.size);
   for(int i=0;i<cl.size;i++){
     for(int j=0;j<cl.C[i].size;j++)
       printf("%d ",cl.C[i].l[j]);
@@ -424,6 +425,13 @@ clause * copy(clause *cl){
 		}
 	return tmp;
 }
+
+void copylit(clause *cl,lit t,int s){
+	cl->C[s].size=t.size;
+	for(int i=0;i<cl->C[s].size;i++)
+		cl->C[s].l[i]=t.l[i];
+}
+
 
 clause * rollback(clause *cl, lit taken, int b){
 	clause *tmp;
@@ -674,10 +682,18 @@ int dpll_all(clause *cl,int h){
 * a -a e -e 
 * */
 
-int dpll_all_sol(clause *cl,int h){
-  int i=0,l,random=0,r=0,sat=0,k=0;
+
+
+void printlit(lit t){
+	for(int i=0;i<t.size;i++)
+		printf("%d ",t.l[i]);
+}
+
+int dpll_all_sol(clause *cl,int h,clause *solutions){
+  int i=0,l,random=0,r=0,sat=0,k=0,s=0;
   lit taken,takenrand,taken_all;
-  clause *tmp;  
+  clause *tmp;
+    
   tmp=copy(cl);
   taken.size=0;
   taken.l=malloc(sizeof(int*)*100);  
@@ -761,8 +777,12 @@ int dpll_all_sol(clause *cl,int h){
 	  //printclauses(*cl);
 	  choicelit(l,cl);
 	  printclauses(*cl);
-	  if(cl->size==0)
+	  if(cl->size==0){
 		  printf("ensemble vide\n\n");
+		  solutions->size++;
+		  copylit(solutions,taken,s);
+		  s++;
+	  }
 	  else
 		  printf("\n");
 		//vérification littéraux
@@ -808,8 +828,7 @@ void pigeongen(char *file,int n){
 	}	
 	
 	x=l-(2*(n-1))+1;
-	printf("x : %d size %ld comb %ld f14 %ld\n",x,cl->size,comb(n,2),fact(n));
-	q=l+4;
+	printf("x : %d size %ld comb %ld f14 %ld\n",x,cl->size,comb(n,2),fact(n));	
 	for(int i=0;i<(n-1);i++){
 		l=2*(i+1);
 		q=l+(2*(n-1));	
@@ -833,11 +852,163 @@ void pigeongen(char *file,int n){
 	//return cl;
 }
 
+int min(int a,int b){
+	return a<b ? a : b;
+}
+
+void damesgen(char *file,int n){
+	int x,q,max,k,l=1,p;
+	clause *cl;
+	cl=malloc(sizeof(clause*));	
+	//cl->size=n+n+n*comb(n,2);*
+	cl->size=500;
+	printf("size : %ld\n",cl->size);
+	cl->C=malloc(sizeof(lit*)*(2*cl->size));
+	for(int i=0;i<cl->size;i++){
+	  cl->C[i].l=malloc(sizeof(int*)*50);
+	  memset(cl->C[i].l,0,sizeof(int*)*50);
+	}
+	for(int i=0;i<n;i++){
+		k=i+n;
+		cl->C[i].size=n;
+		cl->C[k].size=n;
+		for(int j=0;j<n;j++){			
+			cl->C[i].l[j]=l;
+			cl->C[k].l[j]=l+1;
+			l+=2;
+		}
+	}	
+	max=l-1;
+	x=max-2*(n-1);	
+	for(int i=0;i<n;i++){
+		l=2*(i+1);
+		q=l+2*n;	
+		for(int j=(k+1);j<(k+1)+comb(n,2);j++){
+			cl->C[j].size=2;
+			cl->C[j].l[0]=l;
+			cl->C[j].l[1]=q;
+			if(q==x){
+				l+=2*n;
+				q=l+2*n;
+			}
+			else
+				q+=2*n;
+		}
+		k+=comb(n,2);
+		x+=2;
+	}
+	l=2;
+	printf("%d\n",k);
+	for(int i=0;i<(n-1);i++){
+		for(int j=0;j<n;j++){
+			if(j!=0){
+				q=l;
+				for(p=(k+1);p<(k+1)+min(j,n-i-1);p++){
+					q+=2*(n-1);
+					cl->C[p].size=2;
+					cl->C[p].l[0]=l;
+					cl->C[p].l[1]=q;										
+					//k++;
+				}
+				k+=p-(k+1);	
+			}				
+			if(j!=(n-1)){
+				q=l;						
+				for(p=(k+1);p<(k+1)+min(n-j-1,n-i-1);p++){
+					q+=2*(n+1);
+					cl->C[p].size=2;					
+					cl->C[p].l[0]=l;
+					cl->C[p].l[1]=q;										
+					//k++;
+				}
+				k+=p-(k+1);
+			}			
+			l+=2;
+		}
+	}
+	cl->size=k+1;
+	printclauses(*cl);
+	exportfic(file,cl);
+}
+/*
+1 3
+5 7
+2 4
+6 8
+2 6
+4 8
+
+0
+2 10
+
+1
+2 18
+
+2 4 6 
+8 10 12
+14 16 18
+*/
+
+/*
+-d11 v -d22
+-d11 v -d33
+-d22 v -d33
+
+-d13 v -d22
+-d13 v -d33
+-d22 v -d31
+
+-d12 v -d21 
+-d12 v-d23 
 
 
+
+-d
+
+d11 v d12 v d13 v -d14
+d21 v d22 v d23
+d31 v d32 v d33
+
+2	4	6
+8	10	12
+-d11 v -d12 v -d13
+-d21 v -d22 v -d23
+-d31 v -d32 v -d33
+
+//same Line
+-d11 v -d21	
+-d11 v -d31 
+-d11 v -d41
+-d21 v -d31
+-d12 v -d22
+-d12 v -d32
+-d22 v -d32
+-d13 v -d23
+-d13 v -d33
+-d23 v -d33
+
+//DIAG
+-d11 v -d22
+-d11 v -d33
+
+-d21 v -d12
+-d22 v -d13
+
+-d21 v -d31
+-d22 v -d32
+-d23 v -d33
+-d21 v -d32
+
+	d1  d2  d3
+1   x   
+2
+3
+* */
 int main(int argc,char **argv){
   int ret=0;
   clause *cl;
+  clause *solutions;
+  
   //clause *tmp;
   /*
   lit li;
@@ -854,14 +1025,26 @@ int main(int argc,char **argv){
   if((cl=readficnum(argv[1]))==NULL)
 	return -1; 
   
+  solutions=malloc(sizeof(clause*));
+  solutions->size=0;
+  solutions->C=malloc(sizeof(lit*)*(2*cl->size));
+  for(int i=0;i<cl->size;i++){
+	solutions->C[i].l=malloc(sizeof(int*)*50);
+	memset(solutions->C[i].l,0,sizeof(int*)*50);
+  }
+  
   printclauses(*cl);
   printf("\n");	
 	
-  if((ret=dpll_all_sol(cl,atoi(argv[2]))))
+  if((ret=dpll_all_sol(cl,atoi(argv[2]),solutions)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
+  
+  printclauses(*solutions);
 	
+	//damesgen("dames3",3);
+	//damesgen("dames2",2);
   /*pigeongen("satpig14",14);
   pigeongen("satpig13",13);
   pigeongen("satpig12",12);
