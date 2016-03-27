@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+int FILE_TYPE=-1;
 /* a = 1
  * -a=2
  * b=3
@@ -12,22 +13,6 @@
  // etat_var combien de valeurs essayées pr une variable (vecteur 1D à 0 au début)
  // longeueur clause = 2 au départ
  // etat_clause
-
- /*
- typedef struct{
-	 int val;
-	 lit *suiv
- }lit;
-
- typedef struct{
-
- }clause;
- */
-
-typedef struct{
-  int size;
-  char **C;
-}clauselit;
 
 typedef struct{
   int size;
@@ -40,42 +25,28 @@ typedef struct{
 }clause;
 
 
-
-//lit les clauses dans un tableau 2D de CHAR
- void readficlit(char *file,clauselit *cl){
-	 FILE *fp;
-	 int ch,i,j=0,size=0;
-	 fp=fopen(file,"r");
-	 if(fp){
-		while((ch=fgetc(fp))!=EOF){
-			if(ch=='\n')
-				size++;
+int checkfic(char *file){
+	int ch;
+	FILE *fp;
+	fp=fopen(file,"r");
+	if(fp){
+		ch=fgetc(fp);
+		printf("%d\n",ch);
+		if((ch>96 && ch<123) || ch==45){			
+			FILE_TYPE=0;
 		}
-		printf("size : %d\n",size);
-		rewind(fp);
-    cl->size=size;
-		cl->C=malloc(sizeof(char*)*500);
-		for(i=0;i<size;i++)
-			cl->C[i]=malloc(sizeof(char*)*size);
-    i=0;
-		while((ch=fgetc(fp))!=EOF){
-			while(ch!='\n'){
-				if(ch!=' '){
-					cl->C[i][j]=ch;
-					j++;
-				}
-        ch=fgetc(fp);
-			}
-      cl->C[i][j]='\0';
-      j=0;
-			i++;
-		 }
-		 fclose(fp);
-	 }
- }
+		else{
+			FILE_TYPE=1;
+		}
+		fclose(fp);				
+	}
+	else
+		fprintf(stderr,"Le fichier \"%s\" à lire n'a pas pu être ouvert en lecture\n",file);		
+	return FILE_TYPE;
+}
 
 //lit les clauses dans un tableau 2D de INT selon où a=1 , -a=2 , b=3 ...
- clause *readfic(char *file){
+ clause *readficlit(char *file){
    clause *cl;
 	FILE *fp;
 	int ch,i,j=0,size=0;	
@@ -110,8 +81,7 @@ typedef struct{
 			}
 			ch=fgetc(fp);
 		}
-		cl->C[i].size=j;
-		//cl->C[i].l[j]=0;
+		cl->C[i].size=j;		
 		j=0;
 		i++;
 	 }
@@ -164,6 +134,12 @@ typedef struct{
 	 return cl;
  }
  
+  clause * readfic(char *file){
+	 if(checkfic(file))
+		return readficnum(file);
+	 return readficlit(file);
+ }
+ 
  void exportfic(char *file,clause *cl){
 	 FILE *fp;
 	 fp=fopen(file,"w");
@@ -181,15 +157,6 @@ typedef struct{
 	 }
 	 else
 		fprintf(stderr,"Le fichier \"%s\" à exporter n'a pas pu être ouvert en écriture\n",file);
- }
-
-//affiche les clauses pour la structure avec tableau de CHARR
- void printclauseslit(clauselit cl){
-  for(int i=0;i<cl.size;i++){
-    for(int j=0;cl.C[i][j]!='\0';j++)
-      printf("%c ",cl.C[i][j]);
-    printf("\n");
-  }
  }
 
 //affiche les clauses pour la structure avec tableau de INT
@@ -232,30 +199,7 @@ int findcl(int x,clause cl){
   return 0;
 
 }
-/*
-//Renvoie 1 s'il y a une inconsistence dans l'ensemble de clauses (pas satisfiable)
-int inconsistent(clause cl, lit taken){
-  //int n=max(cl);
-  for(int i=0;i<cl.size;i++)
-    if(cl.C[i].size==1){
-      if(!(cl.C[i].l[0]%2)){
-        if(findlit(cl.C[i].l[0]-1,taken)!=-1)
-    			return 1;
-    		for(int j=i+1;j<cl.size;j++)
-    			if(cl.C[j].size==1 && cl.C[i].l[0]-1==cl.C[j].l[0])
-    				return 1;
-      }
-      else{
-        if(findlit(cl.C[i].l[0]+1,taken)!=-1)
-          return 1;
-          for(int j=i+1;j<cl.size;j++)
-      			if(cl.C[j].size==1 && cl.C[i].l[0]+1==cl.C[j].l[0])
-      				return 1;
-	  }
-	}
-  return 0;
-}
-*/
+
 //Renvoie 1 s'il y a une inconsistence dans l'ensemble de clauses (pas satisfiable)
 int inconsistent(clause cl){  
   for(int i=0;i<cl.size;i++)
@@ -328,49 +272,6 @@ void choicelit(int l,clause *cl){
 	}
   }
   //return cl;
-}
-
-/*
-1 a
-2 -a
-
-(p v q) n -p n (-p v q v -r)
-
-(p v q v -r) n (p v -q) n -p n r n u
-*/
-
-//Applique dpll sur un ensemble de clauses
-int dpll(clause *cl){
-  int i=0,l;
-  lit taken;
-  taken.size=0;
-  taken.l=malloc(sizeof(int*)*100);
-  //Si vide renvoie vrai
-  while(cl->size!=0){
-	  // si pb renvoie faux
-	  if(inconsistent(*cl))
-		  return 0;
-	  //vérifie mono-littéraux
-	  if((l=monolit(*cl)));
-	  else if((l=veriflitpurs(*cl)));
-	  else
-		  l=cl->C[0].l[0];
-	  taken.l[i]=l;
-	  taken.size++;
-	  if(l%2==0)
-		printf("l : -%c\n",l/2+96);
-      else
-		printf("l : %c\n",(l+1)/2+96);
-	  choicelit(l,cl);
-	  printclausesch(*cl);
-	  if(cl->size==0)
-		printf("vide\n\n");
-	  else
-		printf("\n");
-		//vérification littéraux
-		i++;
-  }
-  return 1;
 }
 
 int all(clause cl,lit taken_all){
@@ -566,129 +467,19 @@ int firstfailbis(clause cl){
 	
 	return x[max_ind];
 }
-
 /*
-int firstfailbis(clause cl){
-	int l,big=0;
-	for(int i=0;i<cl.size;i++)
-		if(cl.size>big)
-			big=cl.size;
-	for(int i=0;i<cl.size;i++){
-		for(int j=0;j<cl.C[i].size;j++){
-			if((cl.C[i].l[j]%2)!=0){
-				if(findcl(cl.C[i].l[j]+1,cl))
-					return cl.C[i].l[j];
-			}
-			else
-				if(findcl(cl.C[i].l[j]-1,cl))
-					return cl.C[i].l[j];			
-		}
-	}
-}
-
 int countlit(int l,clause cl){
 	for(int i=0;i<cl.size;i++)
 		for(int j=0;j<cl.C[i].size;j++)		
 }
 */
-/*taken_all contains all taken litterals since start of dpll
-  taken contains taken litterals for a given path in dpll
-  check taken for pure litteral
-  delete all taken litterals after pure litteral from taken
-  take opposite polarity of litteral or next litteral
-  repeat till taken_all contains all litterals
-*/
-
-//takenrand = litts taken randomly
-
-//Applique dpll sur un ensemble de clauses
-/*
-int dpll_all(clause *cl,int h){
-  int i=0,l,random=0,b,r=0;
-  lit taken,takenrand;
-  clause *tmp;  
-  tmp=copy(cl);
-  taken.size=0;
-  taken.l=malloc(sizeof(int*)*100);
-    takenrand.size=0;
-  takenrand.l=malloc(sizeof(int*)*100);
-  //Si vide renvoie vrai
-  //REPLACE WITH something ! Maybe while pure lit exists in takenrand maybe same as above 
-  while(cl->size!=0){
-      l=0;
-	  // si pb renvoie faux
-	  if(inconsistent(*cl)){
-      if(random){
-        if((l=back(takenrand))==0)  //go back to last pure litteral (from back to front) taken randomly
-          return 0;
-        else{
-          if(l%2==0)
-            b=findlit(l-1,taken);
-          else
-            b=findlit(l+1,taken);          
-          taken.l[k]=l;
-          taken.size=k+1;
-          for(int p=0;taken.size;p++)
-			taken.l[p]=0;
-          takenrand.l[r]=l;
-          takenrand.size++;
-          r++;
-          cl=rollback(tmp,taken,b);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)
-          //maybe resize takenrand
-      }
-      }
-      else
-		    return 0;
-    }
-      if(l==0){
-	  //vérifie mono-littéraux ou lit purs
-	  if((l=monolit(*cl)));
-	  else if((l=veriflitpurs(*cl)));
-	  else{
-      	random=1;
-      	if(h==1)
-			l=firstsatisfy(*cl);
-		else
-			l=chooseunsignedlit(*cl);
-		printf("takenrand : %d\n",l);
-      	takenrand.l[r]=l;
-      	takenrand.size++;
-      	r++;
-	  }
-    }
-	  taken.l[i]=l;
-    taken.size++;
-	  if(l%2==0)
-		  printf("l : -%c\n",l/2+96);
-    else
-		  printf("l : %c\n",(l+1)/2+96);
-	  choicelit(l,cl);
-	  printclausesch(*cl);
-	  if(cl->size==0)
-		  printf("ensemble vide\n\n");
-	  else
-		  printf("\n");
-		//vérification littéraux
-		i++;
-  }
-  return 1;
-}
-* 
-* 
-* a e -e
-* a -a
-* a -a e
-* a -a e -e  
-* a -a e -e 
-* */
-
-
 
 void printlit(lit t){
 	for(int i=0;i<t.size;i++)
 		printf("%d ",t.l[i]);
 }
 
+//Applique dpll sur un ensemble de clauses
 int dpll_all_sol(clause *cl,int h,clause *solutions){
   int i=0,l,random=0,r=0,sat=0,k=0,s=0;
   lit taken,takenrand,taken_all;
@@ -768,17 +559,21 @@ int dpll_all_sol(clause *cl,int h,clause *solutions){
 	}
     taken_all.l[i]=l;
     taken_all.size++;
-	/* if(l%2==0)
-		  printf("l : -%c\n",l/2+96);
-    else
-		  printf("l : %c\n",(l+1)/2+96);*/
-	printf("l : %d\n",l);
-	  //printclausesch(*cl);
-	  //printclauses(*cl);
+    if(FILE_TYPE==0){
+		if(l%2==0)
+			printf("l : -%c\n",l/2+96);
+		else
+			printf("l : %c\n",(l+1)/2+96);
+		printclausesch(*cl);
+	}
+	else{
+		printf("l : %d\n",l);	  
+		printclauses(*cl);
+	}
 	  choicelit(l,cl);
-	  printclauses(*cl);
+	  //printclauses(*cl);
 	  if(cl->size==0){
-		  printf("ensemble vide\n\n");
+		  printf("\nensemble vide\n\n");
 		  solutions->size++;
 		  copylit(solutions,taken,s);
 		  s++;
@@ -930,101 +725,41 @@ void damesgen(char *file,int n){
 	printclauses(*cl);
 	exportfic(file,cl);
 }
-/*
-1 3
-5 7
-2 4
-6 8
-2 6
-4 8
 
-0
-2 10
-
-1
-2 18
-
-2 4 6 
-8 10 12
-14 16 18
-*/
-
-/*
--d11 v -d22
--d11 v -d33
--d22 v -d33
-
--d13 v -d22
--d13 v -d33
--d22 v -d31
-
--d12 v -d21 
--d12 v-d23 
-
-
-
--d
-
-d11 v d12 v d13 v -d14
-d21 v d22 v d23
-d31 v d32 v d33
-
-2	4	6
-8	10	12
--d11 v -d12 v -d13
--d21 v -d22 v -d23
--d31 v -d32 v -d33
-
-//same Line
--d11 v -d21	
--d11 v -d31 
--d11 v -d41
--d21 v -d31
--d12 v -d22
--d12 v -d32
--d22 v -d32
--d13 v -d23
--d13 v -d33
--d23 v -d33
-
-//DIAG
--d11 v -d22
--d11 v -d33
-
--d21 v -d12
--d22 v -d13
-
--d21 v -d31
--d22 v -d32
--d23 v -d33
--d21 v -d32
-
-	d1  d2  d3
-1   x   
-2
-3
-* */
 int main(int argc,char **argv){
-  int ret=0;
+  int ret=0,h;
   clause *cl;
   clause *solutions;
   
-  //clause *tmp;
-  /*
-  lit li;
-  li.l=malloc(sizeof(int*)*100);
-  cl=malloc(sizeof(clause));
-  clauselit *cl;
-  cl=malloc(sizeof(clauselit));
-  */
-  if(argc-1!=2){
-	fprintf(stderr,"USAGE : %s fichier.sat heuristique\n",argv[0]);
+  if(argc-1<2 || (argc-1)%2!=0){
+	fprintf(stderr,"USAGE : %s [-x pigeon|dames n fichiersortie] [fichier.sat heuristique]\n",argv[0]);
 	return -1;
   }
-
-  if((cl=readficnum(argv[1]))==NULL)
-	return -1; 
   
+  if(strcmp(argv[1],"-x")==0 && argc-1>=4){
+	  if(strcmp(argv[2],"pigeon")==0)
+		pigeongen(argv[4],atoi(argv[3]));
+	  else if(strcmp(argv[2],"dames")==0)
+		damesgen(argv[4],atoi(argv[3]));
+	  else{
+		fprintf(stderr,"Le générateur \"%s\" n'existe pas!\n",argv[2]); 
+		return -1;
+	  }
+  }
+  else{
+    if((cl=readfic(argv[1]))==NULL)
+		return -1; 
+	h=atoi(argv[2]);
+  }
+ 
+  if(argc-1>4){
+	if((cl=readfic(argv[5]))==NULL)
+		return -1; 
+    h=atoi(argv[6]);
+  }
+  else if(argc-1==4)
+	return ret;
+	
   solutions=malloc(sizeof(clause*));
   solutions->size=0;
   solutions->C=malloc(sizeof(lit*)*(2*cl->size));
@@ -1032,39 +767,17 @@ int main(int argc,char **argv){
 	solutions->C[i].l=malloc(sizeof(int*)*50);
 	memset(solutions->C[i].l,0,sizeof(int*)*50);
   }
-  
-  printclauses(*cl);
-  printf("\n");	
 	
-  if((ret=dpll_all_sol(cl,atoi(argv[2]),solutions)))
+  if((ret=dpll_all_sol(cl,h,solutions)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
   
-  printclauses(*solutions);
-	
-	//damesgen("dames3",3);
-	//damesgen("dames2",2);
-  /*pigeongen("satpig14",14);
-  pigeongen("satpig13",13);
-  pigeongen("satpig12",12);
-  pigeongen("satpig11",11);*/
-  //pigeongen("satpig6",6);
-  //pigeongen("satpig10",10);
-  //pigeongen("satpig7",7);
-  //pigeongen("satpig8",8);
-  //pigeongen("satpig9",9);
+  printf("\nSolutions : \n");
+  if(FILE_TYPE==0)
+	printclausesch(*solutions);
+  else
+	printclauses(*solutions);
   return ret;
-  
-  /* TESTS Fonctionnels
-  cl=choicelit(34,cl);
-  //cl=choicelit(31,cl);
-  printf("\n");
-  printclauses(*cl);
-  li.l[0]=35;
-  li.size=1;
-  printf("%d\n",inconsistent(*cl,li));
-  printf("%d\n",monolit(*cl));
-  printf("%d\n",veriflitpurs(*cl));*/
 
 }
