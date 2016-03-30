@@ -24,7 +24,7 @@ typedef struct{
   lit *C;
 }clause;
 
-
+//Renvoie le type de fichier (fichier avec clauses en char ou en int)
 int checkfic(char *file){
 	int ch;
 	FILE *fp;
@@ -45,7 +45,7 @@ int checkfic(char *file){
 	return FILE_TYPE;
 }
 
-//lit les clauses dans un tableau 2D de INT selon où a=1 , -a=2 , b=3 ...
+//lit les clauses dans un struct clause où a=1 , -a=2 , b=3 ...
  clause *readficlit(char *file){
    clause *cl;
 	FILE *fp;
@@ -94,7 +94,7 @@ int checkfic(char *file){
 	 return cl;
  }
  
- //lit les clauses dans un tableau 2D de INT selon où a=1 , -a=2 , b=3 ...
+ //lit les clauses dans un struct clause (uniquement des int)
  clause *readficnum(char *file){
    clause *cl;
 	FILE *fp;
@@ -107,15 +107,16 @@ int checkfic(char *file){
 		}
 		printf("size : %d\n",size);
 		rewind(fp);
-		cl=malloc(sizeof(clause*));
+		cl=malloc(sizeof(clause*)*(size));
 		cl->size=size;
-		cl->C=malloc(sizeof(lit*)*(2*size));
+		cl->C=malloc(sizeof(lit*)*(2*(size+1)));
 		for(int i=0;i<cl->size;i++){
 		  cl->C[i].l=malloc(sizeof(int*)*50);
 		  memset(cl->C[i].l,0,sizeof(int*)*50);
 		}
 		i=0;
 		while(!feof(fp)){
+			printf("%d %d\n",i,j);
 			fscanf(fp,"%d",&cl->C[i].l[j]);
 			ch=fgetc(fp);			
 			j++;
@@ -134,12 +135,14 @@ int checkfic(char *file){
 	 return cl;
  }
  
+ //Détermine le type de fichier et éffectue la lecture de fichier correspondante
   clause * readfic(char *file){
 	 if(checkfic(file))
 		return readficnum(file);
 	 return readficlit(file);
  }
  
+ //exporte l'ensemble de clauses cl dans un fichier file
  void exportfic(char *file,clause *cl){
 	 FILE *fp;
 	 fp=fopen(file,"w");
@@ -183,6 +186,7 @@ void printclausesch(clause cl){
  }
 
 //Cherche un littéral parmi une clause ou une liste de littéraux
+//Retourne l'indice dans le tableau de l'emplacement de la valeur ou -1 si la valeur n'est pas trouvée
 int findlit(int x,lit taken){
   for(int i=0;i<taken.size;i++)
     if(taken.l[i]==x)
@@ -190,7 +194,7 @@ int findlit(int x,lit taken){
   return -1;
 }
 
-//Cherche un littéral parmi toutes les clauses
+//Cherche un littéral parmi toutes les clauses et renvoie vrai s'il le trouve et faux sinon
 int findcl(int x,clause cl){
   for(int i=0;i<cl.size;i++)
     for(int j=0;j<cl.C[i].size;j++)
@@ -198,6 +202,15 @@ int findcl(int x,clause cl){
         return 1;
   return 0;
 
+}
+
+//Trouve une valueur parmi un tableau de int
+//Retourne l'indice dans le tableau de l'emplacement de la valeur ou -1 si la valeur n'est pas trouvée
+int find(int x,int *T){
+	for(int i=0;T[i]!=0;i++)
+		if(T[i]==x)
+			return i;
+	return -1;
 }
 
 //Renvoie 1 s'il y a une inconsistence dans l'ensemble de clauses (pas satisfiable)
@@ -219,7 +232,7 @@ int inconsistent(clause cl){
 }
 
 
-//Cherche un mono-littéral
+//Cherche le premier mono-littéral dans cl
 int monolit(clause cl){
   for(int i=0;i<cl.size;i++){
     if(cl.C[i].size==1)
@@ -228,7 +241,7 @@ int monolit(clause cl){
   return 0;
 }
 
-//Cherche un littéral pur
+//Cherche le premier littéral pur dans cl
 int veriflitpurs(clause cl){
   int x;
   for(int i=0;i<cl.size;i++)
@@ -250,12 +263,10 @@ void choicelit(int l,clause *cl){
   for(int i=0;i<cl->size;i++){
     if(findlit(l,cl->C[i])!=-1){
       for(t=i;t<cl->size-1;t++)
-        cl->C[t]=cl->C[t+1];
-      //cl.C[t]=-1;
+        cl->C[t]=cl->C[t+1];      
       cl->size--;
       reset=1;
-    }
-    //adjust list like above and decrement size
+    }    
     if(l%2==0)
       x=findlit(l-1,cl->C[i]);
     else
@@ -270,24 +281,21 @@ void choicelit(int l,clause *cl){
 		i--;
 		reset=0;
 	}
-  }
-  //return cl;
+  }  
 }
 
-int all(clause cl,lit taken_all){
-	//printclauses(cl);
-	//printf("size : %d\n",cl.size);
-  for(int i=0;i<6;i++)
-	//printf("%d\n",taken_all.l[i]);
+//vérifie si tous les littéraux de l'ensemble de clauses cl sont contenus dans taken_all
+int all(clause cl,lit taken_all){	
+  for(int i=0;i<6;i++)	
   for(int i=0;i<cl.size;i++)
-    for(int j=0;j<cl.C[i].size;j++){
-		//printf("t %d\n",cl.C[i].l[j]);
+    for(int j=0;j<cl.C[i].size;j++){		
       if(findlit(cl.C[i].l[j],taken_all)==-1)
         return 0;
 	}
   return 1;
 }
 
+//Choisit le premier littéral positif dans cl
 int chooseunsignedlit(clause cl){
   for(int i=0;i<cl.size;i++)
     for(int j=0;j<cl.C[i].size;j++)
@@ -296,6 +304,7 @@ int chooseunsignedlit(clause cl){
   return 0;
 }
 
+//Cherche le dernier littéral pur de takenrand puis renvoie son inverse
 int back(lit takenrand){
   for(int i=takenrand.size-1;i>=0;i--){
     if(takenrand.l[i]%2==0){
@@ -310,14 +319,15 @@ int back(lit takenrand){
   return 0;
 }
 
+//Copie l'ensemble de clauses cl et renvoie la copie
 clause * copy(clause *cl){
 	clause *tmp;		
 	tmp=malloc(sizeof(clause));
 	tmp->C=malloc(sizeof(lit*)*(cl->size*2));
 	tmp->size=cl->size;
 	for(int i=0;i<cl->size;i++){
-		  tmp->C[i].l=malloc(sizeof(int*)*cl->C[i].size);
-		  memset(tmp->C[i].l,0,sizeof(int*)*cl->C[i].size);
+		  tmp->C[i].l=malloc(sizeof(int*)*(cl->C[i].size+1));
+		  memset(tmp->C[i].l,0,sizeof(int*)*(cl->C[i].size+1));
 	 }
 	for(int i=0;i<cl->size;i++)
 		for(int j=0;j<cl->C[i].size;j++){
@@ -327,13 +337,14 @@ clause * copy(clause *cl){
 	return tmp;
 }
 
+//copie les littéraux de t dans la clause cl->C[s]
 void copylit(clause *cl,lit t,int s){
 	cl->C[s].size=t.size;
 	for(int i=0;i<cl->C[s].size;i++)
 		cl->C[s].l[i]=t.l[i];
 }
 
-
+//Applique le choix des b littéraux de taken sur un ensemble de clauses
 clause * rollback(clause *cl, lit taken, int b){
 	clause *tmp;
 	tmp=copy(cl);
@@ -342,20 +353,13 @@ clause * rollback(clause *cl, lit taken, int b){
 	return tmp;
 }
 
-int find(int x,int *T){
-	for(int i=0;T[i]!=0;i++)
-		if(T[i]==x)
-			return i;
-	return -1;
-}
-
-//Choisit le littéral qui apparait le plus dans la base de clauses
+//Heuristique 1 : Choisit le littéral qui apparait le plus dans la base de clauses
 int firstsatisfy(clause cl){
 	printf("firstsat\n");
-	int count=0,k=0,max=0,max_ind=0;
+	int count=0,k=0,max=0,max_ind=0,ret;
 	int *x;
-	x=malloc(sizeof(int*)*20);
-	memset(x,0,sizeof(int*)*20);
+	x=malloc(sizeof(int*)*cl.size);
+	memset(x,0,sizeof(int*)*cl.size);
 	x[k]=0;
 	for(int i=0;i<cl.size;i++){
 		for(int j=0;j<cl.C[i].size;j++){
@@ -376,16 +380,18 @@ int firstsatisfy(clause cl){
 		}
 	}
 	
-	return x[max_ind];
+	ret=x[max_ind];
+	free(x);
+	return ret;
 }
 
-//L'oppposé QUI APPARAIT LE PLUS
+//Heuristique 2 : L'oppposé QUI APPARAIT LE PLUS
 int firstfail(clause cl){			
 	printf("firstfail\n");
 	int count=0,k=0,max=0,max_ind=0;
 	int *x;
-	x=malloc(sizeof(int*)*20);
-	memset(x,0,sizeof(int*)*20);
+	x=malloc(sizeof(int*)*cl.size);
+	memset(x,0,sizeof(int*)*cl.size);
 	x[k]=0;
 	for(int i=0;i<cl.size;i++){
 		for(int j=0;j<cl.C[i].size;j++){
@@ -414,6 +420,7 @@ int firstfail(clause cl){
 	return x[max_ind];
 }
 
+//Heuristique 3
 int firstfailbis(clause cl){			
 	printf("firstfailbis\n");	
 	int count=0,k=0,max=0,max_ind=0,size=0,neq=0;
@@ -425,8 +432,8 @@ int firstfailbis(clause cl){
 		if(cl.C[i].size<size)
 			neq=1;
 	int *x;
-	x=malloc(sizeof(int*)*20);
-	memset(x,0,sizeof(int*)*20);
+	x=malloc(sizeof(int*)*cl.size);
+	memset(x,0,sizeof(int*)*cl.size);
 	x[k]=0;
 	for(int i=0;i<cl.size;i++){
 		for(int j=0;j<cl.C[i].size;j++){
@@ -480,8 +487,8 @@ void printlit(lit t){
 }
 
 //Applique dpll sur un ensemble de clauses
-int dpll_all_sol(clause *cl,int h,clause *solutions){
-  int i=0,l,random=0,r=0,sat=0,k=0,s=0;
+int dpll(clause *cl,int h,clause *solutions){
+  int i=0,l,random=0,r=0,sat=0,k=0,s=0,inc=0;
   lit taken,takenrand,taken_all;
   clause *tmp;
     
@@ -494,21 +501,19 @@ int dpll_all_sol(clause *cl,int h,clause *solutions){
   taken_all.l=malloc(sizeof(int*)*100);
   memset(taken_all.l,0,sizeof(int*)*100); 
   memset(taken.l,0,sizeof(int*)*100);
-  memset(takenrand.l,0,sizeof(int*)*100);  
-  //Si vide renvoie vrai
-  //REPLACE WITH something ! Maybe while pure lit exists in takenrand maybe same as above 
-  //while(!all(*tmp,taken_all)){
+  memset(takenrand.l,0,sizeof(int*)*100);    
   while(1){
       l=0;
-      if(!inconsistent(*cl) && cl->size==0)
-		sat=1;
-	  // si pb renvoie faux
-	  if(inconsistent(*cl) || cl->size==0){
+      inc=inconsistent(*cl);
+      if(!inc && cl->size==0)
+		sat=1;	  
+	  if(inc || cl->size==0){
       if(random){
-        if((l=back(takenrand))==0)  //go back to last pure litteral (from back to front) taken randomly          
+        if((l=back(takenrand))==0){            
+          printf("Nombre de noeuds explorés : %d\n",taken_all.size);
           return sat;		
-        else{
-	  //l=back(takenrand);	
+	  }
+        else{	  
           if(l%2==0){
             k=findlit(l-1,taken);
             r=findlit(l-1,takenrand);
@@ -527,13 +532,23 @@ int dpll_all_sol(clause *cl,int h,clause *solutions){
 			takenrand.l[p]=0; 
           takenrand.size=r+2;
           r+=2; 
-          printf("rollback k %d\n",k);         
-          cl=rollback(tmp,taken,k);  //rolls back changes on cl to moment b (using all taken litterals up to b, even unitary or pure)          
-          //maybe resize takenrand
+          //printf("rollback k %d\n",k); 
+          if(inc){
+			printf("Inconsistent!\n");
+			if(FILE_TYPE==0)
+				printclausesch(*cl);
+			else
+				printclauses(*cl);
+			printf("\n");
+		  }
+		  printf("Backtrack...\n");   
+          cl=rollback(tmp,taken,k);           
 		}
       }
-      else
+      else{
+		    printf("Nombre de noeuds explorés : %d\n",taken_all.size);
 		    return sat;
+		}
       }
       if(l==0){
 	  //vérifie mono-littéraux ou lit purs
@@ -570,8 +585,7 @@ int dpll_all_sol(clause *cl,int h,clause *solutions){
 		printf("l : %d\n",l);	  
 		printclauses(*cl);
 	}
-	  choicelit(l,cl);
-	  //printclauses(*cl);
+	  choicelit(l,cl);	  
 	  if(cl->size==0){
 		  printf("\nensemble vide\n\n");
 		  solutions->size++;
@@ -579,14 +593,13 @@ int dpll_all_sol(clause *cl,int h,clause *solutions){
 		  s++;
 	  }
 	  else
-		  printf("\n");
-		//vérification littéraux
-		i++;
-	//printf("hi\n");
+		  printf("\n");		
+		i++;	
   }  
   return 1;
 }
 
+//Renvoie factorielle n
 long fact(int n){
 	long x=1;
 	for(int i=1;i<=n;i++)
@@ -594,16 +607,16 @@ long fact(int n){
 	return x;
 }
 
+//Renvoie le résultat de k parmi n
 long comb(int n,int k){
 	return (fact(n) / (fact(k)*fact(n-k)));
 }
 
+//Génère un fichier file contenant les clauses correspondantes au problème des n-pigeons
 void pigeongen(char *file,int n){
 	int l=1,k,x,q;
 	clause *cl;
-	cl=malloc(sizeof(clause*));
-	//FORMULE DU PROF
-	//cl->size=n+n*comb(n-1,2)+(n-1)*comb(n,2);
+	cl=malloc(sizeof(clause*));	
 	cl->size=n+n+(n-1)*comb(n,2);
 	printf("size : %ld\n",cl->size);
 	cl->C=malloc(sizeof(lit*)*(2*cl->size));
@@ -627,8 +640,7 @@ void pigeongen(char *file,int n){
 	for(int i=0;i<(n-1);i++){
 		l=2*(i+1);
 		q=l+(2*(n-1));	
-		for(int j=(k+1);j<((k+1)+comb(n,2));j++){
-			//printf("%d %d %d %d %d\n",l,i,k, j,comb(n,2));
+		for(int j=(k+1);j<((k+1)+comb(n,2));j++){			
 			cl->C[j].size=2;
 			cl->C[j].l[0]=l;
 			cl->C[j].l[1]=q;
@@ -641,22 +653,22 @@ void pigeongen(char *file,int n){
 		}		
 		k+=comb(n,2);		
 		x+=2;
-	}	
-	//printclauses(*cl);
-	exportfic(file,cl);
-	//return cl;
+	}		
+	exportfic(file,cl);	
 }
 
+//renvoie le min de a et de b
 int min(int a,int b){
 	return a<b ? a : b;
 }
 
+//Génère un fichier file contenant les clauses correspondantes au problème des n-dames
 void damesgen(char *file,int n){
 	int x,q,max,k,l=1,p;
 	clause *cl;
 	cl=malloc(sizeof(clause*));	
-	//cl->size=n+n+n*comb(n,2);*
-	cl->size=500;
+	//cl->size=n+n+n*comb(n,2);
+	cl->size=10000;
 	printf("size : %ld\n",cl->size);
 	cl->C=malloc(sizeof(lit*)*(2*cl->size));
 	for(int i=0;i<cl->size;i++){
@@ -760,24 +772,25 @@ int main(int argc,char **argv){
   else if(argc-1==4)
 	return ret;
 	
-  solutions=malloc(sizeof(clause*));
+  solutions=malloc(sizeof(clause*)*(cl->size+1));
   solutions->size=0;
-  solutions->C=malloc(sizeof(lit*)*(2*cl->size));
+  solutions->C=malloc(sizeof(lit*)*(2*(cl->size+1)));
   for(int i=0;i<cl->size;i++){
 	solutions->C[i].l=malloc(sizeof(int*)*50);
 	memset(solutions->C[i].l,0,sizeof(int*)*50);
   }
 	
-  if((ret=dpll_all_sol(cl,h,solutions)))
+  if((ret=dpll(cl,h,solutions)))
 	printf("Satisfiable\n");
   else
 	printf("Non satisfiable\n");
-  
-  printf("\nSolutions : \n");
-  if(FILE_TYPE==0)
-	printclausesch(*solutions);
-  else
-	printclauses(*solutions);
+	
+  if(solutions->size){
+	printf("\nSolutions : \n");
+	if(FILE_TYPE==0)
+		printclausesch(*solutions);
+	else
+		printclauses(*solutions);
+  }
   return ret;
-
 }
